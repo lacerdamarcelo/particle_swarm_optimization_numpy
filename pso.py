@@ -44,7 +44,6 @@ class PSO:
 
     def run(self):
         for current_iteration in range(0, self.max_iterations):
-            print(current_iteration)
             self.update_velocity()
             self.update_position()
             self.update_personal_bests()
@@ -53,9 +52,9 @@ class PSO:
         print(np.max(self.local_bests_fitnesses))
 
     def init_array(self, arr):
-        return ((self.boundaries[1] - self.boundaries[0]) *
+        return ((self.boundaries[1] - (float(self.boundaries[1]) / 2)) *
                 np.random.random_sample((self.problem.num_dimensions,
-                                        ))) + self.boundaries[0]
+                                        ))) + (float(self.boundaries[1]) / 2)
 
     def define_local_bests(self, arr):
         max_index = np.argmax(arr)
@@ -142,7 +141,7 @@ class PSO:
         return np.concatenate((pos_vel_array[0], pos_vel_array[1]))
 
     def update_position(self):
-        self.population += self.velocities
+        self.population = self.velocities
         concatenated_pos_and_vel = np.concatenate((self.population,
                                                    self.velocities), axis=1)
         new_population_and_vel = np.apply_along_axis(func1d=self.limit_individual_positions,
@@ -166,7 +165,7 @@ class PSO:
             self.max_iterations
 
 if __name__ == '__main__':
-    problem = SphereFunction(2)
-    pso = PSO(0.9, 0.4, 4, 0, 0, 4, 10, problem, (-10, 10), 10)
+    problem = SphereFunction(30)
+    pso = PSO(0.9, 0.4, 2.05, 0, 0, 2.05, 30, problem, (-100, 100), 5000)
     pso.init_algorithm()
     pso.run()
