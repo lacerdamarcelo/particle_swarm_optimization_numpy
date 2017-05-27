@@ -26,7 +26,7 @@ class PSO:
 
         self.initial_cognitive_coefficient = initial_cognitive_coefficient
         self.final_cognitive_coefficient = final_cognitive_coefficient
-        self.initial_social_coefficient = final_social_coefficient
+        self.initial_social_coefficient = initial_social_coefficient
         self.final_social_coefficient = final_social_coefficient
 
         self.cognitive_coefficient = initial_cognitive_coefficient
@@ -43,14 +43,14 @@ class PSO:
         self.update_local_bests()
 
     def run(self):
-        print(self.population)
         for current_iteration in range(0, self.max_iterations):
+            print(current_iteration)
             self.update_velocity()
             self.update_position()
             self.update_personal_bests()
             self.update_local_bests()
             self.update_coefficients()
-        print(self.population)
+        print(np.max(self.local_bests_fitnesses))
 
     def init_array(self, arr):
         return ((self.boundaries[1] - self.boundaries[0]) *
@@ -123,16 +123,50 @@ class PSO:
             np.random.random_sample() *\
             (self.local_bests - self.population)
 
+    def limit_individual_position(self, arr):
+        if arr[0] < self.boundaries[0]:
+            return [self.boundaries[0], -1 * arr[1]]
+        elif arr[0] > self.boundaries[1]:
+            return [self.boundaries[1], -1 * arr[1]]
+        else:
+            return arr
+
+    def limit_individual_positions(self, arr):
+        positions = arr[:self.problem.num_dimensions]
+        velocities = arr[self.problem.num_dimensions:]
+        pos_vel_array = np.transpose([positions, velocities])
+        new_pos_vel_array = np.apply_along_axis(func1d=self.limit_individual_position,
+                                                axis=1,
+                                                arr=pos_vel_array)
+        pos_vel_array = np.transpose(new_pos_vel_array)
+        return np.concatenate((pos_vel_array[0], pos_vel_array[1]))
+
     def update_position(self):
         self.population += self.velocities
+        concatenated_pos_and_vel = np.concatenate((self.population,
+                                                   self.velocities), axis=1)
+        new_population_and_vel = np.apply_along_axis(func1d=self.limit_individual_positions,
+                                                     axis=1,
+                                                     arr=concatenated_pos_and_vel)
+        split = np.split(new_population_and_vel,
+                         indices_or_sections=[0, self.problem.num_dimensions],
+                         axis=1)
+        self.population = split[1]
+        self.velocities = split[2]
 
     def update_coefficients(self):
-        self.inertia_factor += float(self.final_inertia_factor - self.initial_inertia_factor)/self.max_iterations
-        self.cognitive_coefficient += float(self.final_cognitive_coefficient - self.initial_cognitive_coefficient)/self.max_iterations
-        self.social_coefficient += float(self.final_social_coefficient - self.initial_social_coefficient)/self.max_iterations
+        self.inertia_factor += float(self.final_inertia_factor -
+                                     self.initial_inertia_factor) /\
+            self.max_iterations
+        self.cognitive_coefficient += float(self.final_cognitive_coefficient -
+                                            self.initial_cognitive_coefficient) /\
+            self.max_iterations
+        self.social_coefficient += float(self.final_social_coefficient -
+                                         self.initial_social_coefficient) /\
+            self.max_iterations
 
 if __name__ == '__main__':
     problem = SphereFunction(2)
-    pso = PSO(0, 0, 0, 0, 0, 0, 10, problem, (-10, 10), 1000)
+    pso = PSO(0.9, 0.4, 4, 0, 0, 4, 10, problem, (-10, 10), 10)
     pso.init_algorithm()
     pso.run()

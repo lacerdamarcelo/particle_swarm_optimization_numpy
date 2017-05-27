@@ -7,4 +7,4 @@ class SphereFunction:
         self.num_dimensions = num_dimensions
 
     def evaluate_function(self, arr):
-        return np.sum(np.square(arr))
+        return -1 * np.sum(np.square(arr))
