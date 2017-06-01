@@ -1,6 +1,7 @@
 import math
 import numpy as np
-from functions import SphereFunction
+from matplotlib import pyplot as plt
+from functions import SphereFunction, RandomFunction
 
 
 class PSO:
@@ -9,16 +10,17 @@ class PSO:
                  initial_cognitive_coefficient, final_cognitive_coefficient,
                  initial_social_coefficient, final_social_coefficient,
                  population_size, problem, boundaries, max_iterations):
-        self.population = np.asarray([[]] * population_size)
-        self.velocities = np.zeros((population_size, problem.num_dimensions))
 
-        self.personal_bests = np.asarray([[]] * population_size)
-        self.personal_bests_fitnesses = np.asarray([] * population_size)
-        self.local_bests = np.asarray([[]] * population_size)
-        self.local_bests_fitnesses = np.asarray([] * population_size)
+        self.population = np.asarray([[] for i in range(population_size)])
+        self.velocities = np.asarray([[0] * problem.num_dimensions for i in range(population_size)])
+
+        self.personal_bests = np.asarray([[] for i in range(population_size)])
+        self.personal_bests_fitnesses = None
+        self.local_bests = np.asarray([[] for i in range(population_size)])
+        self.local_bests_fitnesses = None
 
         # Non-existent links should be set as -math.inf
-        self.topology = np.ones((population_size, population_size))
+        self.topology = np.asarray([[1] * population_size for i in range(population_size)])
 
         self.initial_inertia_factor = initial_inertia_factor
         self.final_inertia_factor = final_inertia_factor
@@ -49,7 +51,7 @@ class PSO:
             self.update_personal_bests()
             self.update_local_bests()
             self.update_coefficients()
-        print(np.max(self.local_bests_fitnesses))
+            print(np.max(self.personal_bests_fitnesses))
 
     def init_array(self, arr):
         return ((self.boundaries[1] - (float(self.boundaries[1]) / 2)) *
@@ -78,8 +80,10 @@ class PSO:
     def define_personal_bests(self, arr):
         current_position = arr[:self.problem.num_dimensions]
         current_fitness = arr[self.problem.num_dimensions]
-        personal_best_position = arr[self.problem.num_dimensions + 1:(2 * self.problem.num_dimensions) + 1]  # noqa
-        personal_best_fitness = arr[(2 * self.problem.num_dimensions) + 1:(2 * self.problem.num_dimensions) + 2]  # noqa
+        personal_best_position = arr[self.problem.num_dimensions +
+                                     1:(2 * self.problem.num_dimensions) + 1]
+        personal_best_fitness = arr[(2 * self.problem.num_dimensions) +
+                                    1:(2 * self.problem.num_dimensions) + 2]
         if current_fitness > personal_best_fitness:
             return np.append(current_position, current_fitness)
         else:
@@ -89,9 +93,13 @@ class PSO:
         current_fitnesses = np.apply_along_axis(func1d=self.problem.evaluate_function,  # noqa
                                                 axis=1,
                                                 arr=self.population)
-        data = np.concatenate((self.population, current_fitnesses.reshape(self.population.shape[0], 1)), axis=1)  # noqa
+        data = np.concatenate((self.population,
+                               current_fitnesses.reshape(self.population.shape[0],  # noqa
+                                                         1)), axis=1)
         data = np.concatenate((data, self.personal_bests), axis=1)
-        data = np.concatenate((data, self.personal_bests_fitnesses.reshape(self.population.shape[0], 1)), axis=1)  # noqa
+        data = np.concatenate((data,
+                               self.personal_bests_fitnesses.reshape(self.population.shape[0],  # noqa
+                                                                     1)), axis=1)  # noqa
         new_personal_bests = np.apply_along_axis(func1d=self.define_personal_bests,  # noqa
                                                  axis=1,
                                                  arr=data)
@@ -114,13 +122,21 @@ class PSO:
         self.local_bests_fitnesses = np.copy(self.fitnesses)
 
     def update_velocity(self):
-        self.velocities += self.inertia_factor * self.velocities
+        self.velocities = self.inertia_factor * self.velocities
         self.velocities += self.cognitive_coefficient *\
-            np.random.random_sample() *\
+            np.random.random_sample((self.population.shape[0], self.problem.num_dimensions)) *\
             (self.personal_bests - self.population)
         self.velocities += self.social_coefficient *\
-            np.random.random_sample() *\
+            np.random.random_sample((self.population.shape[0], self.problem.num_dimensions)) *\
             (self.local_bests - self.population)
+        # TODO - IMPLEMENT WITH NUMPY
+        for i in range(0, self.velocities.shape[0]):
+            for j in range(0, self.velocities.shape[1]):
+                if self.velocities[i][j] < self.boundaries[0]:
+                    self.velocities[i][j] = self.boundaries[0]
+                elif self.velocities[i][j] > self.boundaries[1]:
+                    self.velocities[i][j] = self.boundaries[1]
+        # TODO - IMPLEMENT WITH NUMPY
 
     def limit_individual_position(self, arr):
         if arr[0] < self.boundaries[0]:
@@ -141,7 +157,7 @@ class PSO:
         return np.concatenate((pos_vel_array[0], pos_vel_array[1]))
 
     def update_position(self):
-        self.population = self.velocities
+        self.population += self.velocities
         concatenated_pos_and_vel = np.concatenate((self.population,
                                                    self.velocities), axis=1)
         new_population_and_vel = np.apply_along_axis(func1d=self.limit_individual_positions,
@@ -166,6 +182,6 @@ class PSO:
 
 if __name__ == '__main__':
     problem = SphereFunction(30)
-    pso = PSO(0.9, 0.4, 2.05, 0, 0, 2.05, 30, problem, (-100, 100), 5000)
+    pso = PSO(0.9, 0.4, 2, 2, 2, 2, 20, problem, (-100, 100), 2000)
     pso.init_algorithm()
     pso.run()
