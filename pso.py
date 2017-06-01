@@ -11,8 +11,6 @@ class PSO:
                  initial_social_coefficient, final_social_coefficient,
                  population_size, problem, boundaries, max_iterations):
 
-        self.memories = [[] for i in range(population_size)]
-
         self.population = np.asarray([[] for i in range(population_size)])
         self.velocities = np.asarray([[0] * problem.num_dimensions for i in range(population_size)])
 
@@ -46,34 +44,14 @@ class PSO:
         self.init_population()
         self.update_local_bests()
 
-    def print_population_file(self):
-        for individual in self.population:
-            for value in individual:
-                self.file.write(str(value) + ',')
-            self.file.write('\n')
-        self.file.write('#################\n')
-
-    def run(self, print_population=False):
-        if print_population:
-            self.file = open('pso.txt', 'w')
-            self.print_population_file()
+    def run(self):
         for current_iteration in range(0, self.max_iterations):
             self.update_velocity()
             self.update_position()
             self.update_personal_bests()
             self.update_local_bests()
             self.update_coefficients()
-            if print_population:
-                self.print_population_file()
             print(np.max(self.personal_bests_fitnesses))
-            total = 0
-            for i in range(0, len(self.memories)):
-                velocity_value = 0
-                for vel in self.velocities[i]:
-                    velocity_value += abs(vel)
-                self.memories[i].append(velocity_value)
-                total += velocity_value
-        self.file.close()
 
     def init_array(self, arr):
         return ((self.boundaries[1] - (float(self.boundaries[1]) / 2)) *
@@ -151,14 +129,14 @@ class PSO:
         self.velocities += self.social_coefficient *\
             np.random.random_sample((self.population.shape[0], self.problem.num_dimensions)) *\
             (self.local_bests - self.population)
-        # IMPLEMENTAR COM NUMPY
+        # TODO - IMPLEMENT WITH NUMPY
         for i in range(0, self.velocities.shape[0]):
             for j in range(0, self.velocities.shape[1]):
                 if self.velocities[i][j] < self.boundaries[0]:
                     self.velocities[i][j] = self.boundaries[0]
                 elif self.velocities[i][j] > self.boundaries[1]:
                     self.velocities[i][j] = self.boundaries[1]
-        # IMPLEMENTAR COM NUMPY
+        # TODO - IMPLEMENT WITH NUMPY
 
     def limit_individual_position(self, arr):
         if arr[0] < self.boundaries[0]:
@@ -206,13 +184,4 @@ if __name__ == '__main__':
     problem = SphereFunction(30)
     pso = PSO(0.9, 0.4, 2, 2, 2, 2, 20, problem, (-100, 100), 2000)
     pso.init_algorithm()
-    pso.run(print_population=True)
-
-    x = range(0, pso.max_iterations)
-
-    fig, ax = plt.subplots()
-
-    for memory in pso.memories:
-        ax.plot(x, memory)
-
-    plt.show()
+    pso.run()
